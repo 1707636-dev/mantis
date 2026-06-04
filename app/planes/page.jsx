@@ -37,68 +37,47 @@ export default function Planes() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#f1f5f9', margin: '0 0 4px' }}>Planes de mantenimiento</h1>
-      <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 32px' }}>Tareas programadas por activo</p>
+      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: '0 0 4px' }}>Planes de mantenimiento</h1>
+      <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 32px' }}>Tareas programadas por activo</p>
 
-      <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '24px', border: '1px solid #334155', marginBottom: '24px', maxWidth: '480px' }}>
-        <h2 style={{ margin: '0 0 16px', fontSize: '15px', color: '#94a3b8', fontWeight: '600' }}>Nuevo plan</h2>
+      <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', padding: '24px', border: '1px solid #9ca3af', marginBottom: '24px', maxWidth: '480px' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: '15px', color: '#374151', fontWeight: '600' }}>Nuevo plan</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <select
-            value={activoId}
-            onChange={e => setActivoId(e.target.value)}
-            style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none' }}
-          >
+          <select value={activoId} onChange={e => setActivoId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none' }}>
             <option value=''>Seleccioná un activo</option>
             {activos.map(a => (<option key={a.id} value={a.id}>{a.nombre}</option>))}
           </select>
-          <input
-            placeholder="Tarea (ej: Cambio de aceite)"
-            value={tarea}
-            onChange={e => setTarea(e.target.value)}
-            style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none' }}
-          />
-          <input
-            placeholder="Cada cuántas horas (ej: 500)"
-            value={frecuencia}
-            onChange={e => setFrecuencia(e.target.value)}
-            type="number"
-            style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none' }}
-          />
-          <button
-            onClick={agregarPlan}
-            style={{ padding: '10px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
-          >
+          <input placeholder="Tarea (ej: Cambio de aceite)" value={tarea} onChange={e => setTarea(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none' }} />
+          <input placeholder="Cada cuántas horas (ej: 500)" value={frecuencia} onChange={e => setFrecuencia(e.target.value)} type="number" style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none' }} />
+          <button onClick={agregarPlan} style={{ padding: '10px', backgroundColor: '#111827', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
             Agregar plan
           </button>
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
+      <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', border: '1px solid #9ca3af', overflow: 'hidden' }}>
         {loading ? (
-          <p style={{ padding: '24px', color: '#64748b', margin: 0 }}>Cargando...</p>
+          <p style={{ padding: '24px', color: '#6b7280', margin: 0 }}>Cargando...</p>
         ) : planes.length === 0 ? (
-          <p style={{ padding: '24px', color: '#64748b', margin: 0 }}>No hay planes registrados.</p>
+          <p style={{ padding: '24px', color: '#6b7280', margin: 0 }}>No hay planes registrados.</p>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#0f172a' }}>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Frecuencia</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}></th>
+              <tr style={{ backgroundColor: '#9ca3af' }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Frecuencia</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}></th>
               </tr>
             </thead>
             <tbody>
               {planes.map((p, i) => (
-                <tr key={p.id} style={{ borderTop: '1px solid #334155', backgroundColor: i % 2 === 0 ? 'transparent' : '#162032' }}>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#e2e8f0' }}>{p.activos?.nombre}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#94a3b8' }}>{p.tarea}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#94a3b8' }}>Cada {p.frecuencia_horas} hs</td>
+                <tr key={p.id} style={{ borderTop: '1px solid #9ca3af', backgroundColor: i % 2 === 0 ? '#d1d5db' : '#c4c9d0' }}>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#111827' }}>{p.activos?.nombre}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{p.tarea}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>Cada {p.frecuencia_horas} hs</td>
                   <td style={{ padding: '14px 16px' }}>
-                    <button
-                      onClick={() => eliminarPlan(p.id)}
-                      style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
-                    >
+                    <button onClick={() => eliminarPlan(p.id)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
                       Eliminar
                     </button>
                   </td>

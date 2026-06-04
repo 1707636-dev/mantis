@@ -45,57 +45,57 @@ export default function Ordenes() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#f1f5f9', margin: '0 0 4px' }}>Órdenes de trabajo</h1>
-      <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 32px' }}>Tareas de mantenimiento activas</p>
+      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: '0 0 4px' }}>Órdenes de trabajo</h1>
+      <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 32px' }}>Tareas de mantenimiento activas</p>
 
-      <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '24px', border: '1px solid #334155', marginBottom: '24px', maxWidth: '480px' }}>
-        <h2 style={{ margin: '0 0 16px', fontSize: '15px', color: '#94a3b8', fontWeight: '600' }}>Nueva orden</h2>
+      <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', padding: '24px', border: '1px solid #9ca3af', marginBottom: '24px', maxWidth: '480px' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: '15px', color: '#374151', fontWeight: '600' }}>Nueva orden</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <select value={activoId} onChange={e => setActivoId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none' }}>
+          <select value={activoId} onChange={e => setActivoId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none' }}>
             <option value=''>Seleccioná un activo</option>
             {activos.map(a => (<option key={a.id} value={a.id}>{a.nombre}</option>))}
           </select>
-          <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none' }}>
+          <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none' }}>
             <option value=''>Seleccioná una tarea</option>
             {planes.map(p => (<option key={p.id} value={p.id}>{p.tarea}</option>))}
           </select>
-          <textarea placeholder='Notas (opcional)' value={notas} onChange={e => setNotas(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none', height: '80px', resize: 'none' }} />
-          <button onClick={crearOrden} style={{ padding: '10px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+          <textarea placeholder='Notas (opcional)' value={notas} onChange={e => setNotas(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none', height: '80px', resize: 'none' }} />
+          <button onClick={crearOrden} style={{ padding: '10px', backgroundColor: '#111827', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
             Crear orden
           </button>
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
+      <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', border: '1px solid #9ca3af', overflow: 'hidden' }}>
         {loading ? (
-          <p style={{ padding: '24px', color: '#64748b', margin: 0 }}>Cargando...</p>
+          <p style={{ padding: '24px', color: '#6b7280', margin: 0 }}>Cargando...</p>
         ) : ordenes.length === 0 ? (
-          <p style={{ padding: '24px', color: '#64748b', margin: 0 }}>No hay órdenes registradas.</p>
+          <p style={{ padding: '24px', color: '#6b7280', margin: 0 }}>No hay órdenes registradas.</p>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#0f172a' }}>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Estado</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Notas</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}></th>
+              <tr style={{ backgroundColor: '#9ca3af' }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Estado</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Notas</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}></th>
               </tr>
             </thead>
             <tbody>
               {ordenes.map((o, i) => (
-                <tr key={o.id} style={{ borderTop: '1px solid #334155', backgroundColor: i % 2 === 0 ? 'transparent' : '#162032' }}>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#e2e8f0' }}>{o.activos?.nombre}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#94a3b8' }}>{o.planes_mantenimiento?.tarea}</td>
+                <tr key={o.id} style={{ borderTop: '1px solid #9ca3af', backgroundColor: i % 2 === 0 ? '#d1d5db' : '#c4c9d0' }}>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#111827' }}>{o.activos?.nombre}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{o.planes_mantenimiento?.tarea}</td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: o.estado === 'completado' ? '#14532d' : '#422006', color: o.estado === 'completado' ? '#4ade80' : '#fb923c' }}>
+                    <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: o.estado === 'completado' ? '#d1fae5' : '#fef3c7', color: o.estado === 'completado' ? '#065f46' : '#92400e' }}>
                       {o.estado}
                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#64748b' }}>{o.notas}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{o.notas}</td>
                   <td style={{ padding: '14px 16px', display: 'flex', gap: '8px' }}>
                     {o.estado === 'pendiente' && (
-                      <button onClick={() => completarOrden(o.id)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#4ade80', border: '1px solid #4ade80', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                      <button onClick={() => completarOrden(o.id)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#065f46', border: '1px solid #065f46', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
                         Completar
                       </button>
                     )}
