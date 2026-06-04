@@ -5,7 +5,7 @@ export const metadata = {
   description: "Sistema de mantenimiento preventivo",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <body style={{ margin: 0, padding: 0, backgroundColor: '#0f172a', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif', minHeight: '100vh', display: 'flex' }}>
