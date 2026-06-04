@@ -9,29 +9,24 @@ export default function Ordenes() {
   const [activoId, setActivoId] = useState('')
   const [planId, setPlanId] = useState('')
   const [notas, setNotas] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    cargarDatos()
-  }, [])
+  useEffect(() => { cargarDatos() }, [])
+
   async function cargarDatos() {
-    const { data: ordenesData } = await supabase
-      .from('ordenes_trabajo')
-      .select('*, activos(nombre), planes_mantenimiento(tarea)')
+    setLoading(true)
+    const { data: ordenesData } = await supabase.from('ordenes_trabajo').select('*, activos(nombre), planes_mantenimiento(tarea)')
     const { data: activosData } = await supabase.from('activos').select('*')
     const { data: planesData } = await supabase.from('planes_mantenimiento').select('*')
     setOrdenes(ordenesData || [])
     setActivos(activosData || [])
     setPlanes(planesData || [])
+    setLoading(false)
   }
 
   async function crearOrden() {
     if (!activoId || !planId) return
-    await supabase.from('ordenes_trabajo').insert({
-      activo_id: activoId,
-      plan_id: planId,
-      notas,
-      estado: 'pendiente'
-    })
+    await supabase.from('ordenes_trabajo').insert({ activo_id: activoId, plan_id: planId, notas, estado: 'pendiente' })
     setActivoId('')
     setPlanId('')
     setNotas('')
@@ -39,55 +34,81 @@ export default function Ordenes() {
   }
 
   async function completarOrden(id) {
-    await supabase
-      .from('ordenes_trabajo')
-      .update({ estado: 'completado', completado_at: new Date() })
-      .eq('id', id)
+    await supabase.from('ordenes_trabajo').update({ estado: 'completado', completado_at: new Date() }).eq('id', id)
     cargarDatos()
   }
+
+  async function eliminarOrden(id) {
+    await supabase.from('ordenes_trabajo').delete().eq('id', id)
+    cargarDatos()
+  }
+
   return (
-    <main style={{ padding: '40px', fontFamily: 'sans-serif' }}>
-      <h1>Órdenes de trabajo</h1>
-      <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '400px' }}>
-        <select value={activoId} onChange={e => setActivoId(e.target.value)} style={{ padding: '8px', fontSize: '16px' }}>
-          <option value=''>Seleccioná un activo</option>
-          {activos.map(a => (<option key={a.id} value={a.id}>{a.nombre}</option>))}
-        </select>
-        <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ padding: '8px', fontSize: '16px' }}>
-          <option value=''>Seleccioná una tarea</option>
-          {planes.map(p => (<option key={p.id} value={p.id}>{p.tarea}</option>))}
-        </select>
-        <textarea placeholder='Notas' value={notas} onChange={e => setNotas(e.target.value)} style={{ padding: '8px', fontSize: '16px', height: '80px' }} />
-        <button onClick={crearOrden} style={{ padding: '10px', backgroundColor: '#2563eb', color: 'white', border: 'none', cursor: 'pointer', fontSize: '16px' }}>Crear orden</button>
+    <div>
+      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#f1f5f9', margin: '0 0 4px' }}>Órdenes de trabajo</h1>
+      <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 32px' }}>Tareas de mantenimiento activas</p>
+
+      <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '24px', border: '1px solid #334155', marginBottom: '24px', maxWidth: '480px' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: '15px', color: '#94a3b8', fontWeight: '600' }}>Nueva orden</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <select value={activoId} onChange={e => setActivoId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none' }}>
+            <option value=''>Seleccioná un activo</option>
+            {activos.map(a => (<option key={a.id} value={a.id}>{a.nombre}</option>))}
+          </select>
+          <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none' }}>
+            <option value=''>Seleccioná una tarea</option>
+            {planes.map(p => (<option key={p.id} value={p.id}>{p.tarea}</option>))}
+          </select>
+          <textarea placeholder='Notas (opcional)' value={notas} onChange={e => setNotas(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', outline: 'none', height: '80px', resize: 'none' }} />
+          <button onClick={crearOrden} style={{ padding: '10px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+            Crear orden
+          </button>
+        </div>
       </div>
-      <table style={{ marginTop: '32px', borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-          <tr style={{ borderBottom: '2px solid #ccc' }}>
-            <th style={{ textAlign: 'left', padding: '8px' }}>Activo</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>Tarea</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-            <th style={{ textAlign: 'left', padding: '8px' }}>Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ordenes.map(o => (
-            <tr key={o.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '8px' }}>{o.activos?.nombre}</td>
-              <td style={{ padding: '8px' }}>{o.planes_mantenimiento?.tarea}</td>
-              <td style={{ padding: '8px' }}>
-                <span style={{ color: o.estado === 'completado' ? 'green' : 'orange', fontWeight: 'bold' }}>
-                  {o.estado}
-                </span>
-              </td>
-              <td style={{ padding: '8px' }}>
-                {o.estado === 'pendiente' && (
-                  <button onClick={() => completarOrden(o.id)} style={{ padding: '6px 12px', backgroundColor: '#16a34a', color: 'white', border: 'none', cursor: 'pointer' }}>Completar</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+
+      <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden' }}>
+        {loading ? (
+          <p style={{ padding: '24px', color: '#64748b', margin: 0 }}>Cargando...</p>
+        ) : ordenes.length === 0 ? (
+          <p style={{ padding: '24px', color: '#64748b', margin: 0 }}>No hay órdenes registradas.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#0f172a' }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Estado</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Notas</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {ordenes.map((o, i) => (
+                <tr key={o.id} style={{ borderTop: '1px solid #334155', backgroundColor: i % 2 === 0 ? 'transparent' : '#162032' }}>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#e2e8f0' }}>{o.activos?.nombre}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#94a3b8' }}>{o.planes_mantenimiento?.tarea}</td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: o.estado === 'completado' ? '#14532d' : '#422006', color: o.estado === 'completado' ? '#4ade80' : '#fb923c' }}>
+                      {o.estado}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#64748b' }}>{o.notas}</td>
+                  <td style={{ padding: '14px 16px', display: 'flex', gap: '8px' }}>
+                    {o.estado === 'pendiente' && (
+                      <button onClick={() => completarOrden(o.id)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#4ade80', border: '1px solid #4ade80', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                        Completar
+                      </button>
+                    )}
+                    <button onClick={() => eliminarOrden(o.id)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
   )
 }
