@@ -17,6 +17,11 @@ export default function Activos() {
     setActivos(data || [])
   }
 
+  async function eliminarActivo(id) {
+    await supabase.from('activos').delete().eq('id', id)
+    cargarActivos()
+  }
+
   async function agregarActivo() {
     if (!nombre) return
     await supabase.from('activos').insert({ nombre, modelo, ubicacion })
@@ -43,6 +48,7 @@ export default function Activos() {
             <th style={{ textAlign: 'left', padding: '8px' }}>Nombre</th>
             <th style={{ textAlign: 'left', padding: '8px' }}>Modelo</th>
             <th style={{ textAlign: 'left', padding: '8px' }}>Ubicación</th>
+            <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -51,6 +57,11 @@ export default function Activos() {
               <td style={{ padding: '8px' }}>{a.nombre}</td>
               <td style={{ padding: '8px' }}>{a.modelo}</td>
               <td style={{ padding: '8px' }}>{a.ubicacion}</td>
+              <td style={{ padding: '8px' }}>
+                <button onClick={() => eliminarActivo(a.id)} style={{ padding: '6px 12px', backgroundColor: '#dc2626', color: 'white', border: 'none', cursor: 'pointer' }}>
+                  Eliminar
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
