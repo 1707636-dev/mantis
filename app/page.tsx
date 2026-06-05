@@ -7,7 +7,7 @@ export default function Home() {
   const [planes, setPlanes] = useState(0)
   const [pendientes, setPendientes] = useState(0)
   const [completadas, setCompletadas] = useState(0)
-  const [proximosMant, setProximosMant] = useState([])
+  const [proximosMant, setProximosMant] = useState<any[]>([])
   const [mesActual, setMesActual] = useState(new Date())
 
   useEffect(() => {
@@ -41,19 +41,19 @@ export default function Home() {
   const diasEnMes = new Date(year, month + 1, 0).getDate()
   const nombreMes = mesActual.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
-  const eventosDelMes = proximosMant.filter(p => {
+  const eventosDelMes = proximosMant.filter((p: any) => {
     const fecha = new Date(p.proxima_fecha)
     return fecha.getMonth() === month && fecha.getFullYear() === year
   })
 
-  function tieneEvento(dia) {
-    return eventosDelMes.filter(p => new Date(p.proxima_fecha).getDate() === dia)
+  function tieneEvento(dia: number) {
+    return eventosDelMes.filter((p: any) => new Date(p.proxima_fecha).getDate() === dia)
   }
 
-  function colorEvento(fecha) {
+  function colorEvento(fecha: string) {
     const hoy = new Date()
     const f = new Date(fecha)
-    const diff = (f - hoy) / (1000 * 60 * 60 * 24)
+    const diff = (f.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)
     if (diff < 0) return '#ef4444'
     if (diff <= 7) return '#f59e0b'
     return '#10b981'
@@ -134,7 +134,7 @@ export default function Home() {
           {eventosDelMes.length > 0 && (
             <div style={{ marginTop: '16px', borderTop: '1px solid #9ca3af', paddingTop: '12px' }}>
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Este mes</p>
-              {eventosDelMes.sort((a, b) => new Date(a.proxima_fecha) - new Date(b.proxima_fecha)).map(e => (
+              {eventosDelMes.sort((a: any, b: any) => new Date(a.proxima_fecha).getTime() - new Date(b.proxima_fecha).getTime()).map((e: any) => (
                 <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #e5e7eb' }}>
                   <div>
                     <span style={{ fontSize: '13px', color: '#111827', fontWeight: '500' }}>{e.activos?.nombre}</span>
