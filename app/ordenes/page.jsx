@@ -15,7 +15,7 @@ export default function Ordenes() {
 
   async function cargarDatos() {
     setLoading(true)
-    const { data: ordenesData } = await supabase.from('ordenes_trabajo').select('*, activos(nombre), planes_mantenimiento(tarea)')
+    const { data: ordenesData } = await supabase.from('ordenes_trabajo').select('*, activos(nombre), planes_mantenimiento(tarea, frecuencia_horas)')
     const { data: activosData } = await supabase.from('activos').select('*')
     const { data: planesData } = await supabase.from('planes_mantenimiento').select('*')
     setOrdenes(ordenesData || [])
@@ -33,14 +33,35 @@ export default function Ordenes() {
     cargarDatos()
   }
 
-  async function completarOrden(id) {
-    await supabase.from('ordenes_trabajo').update({ estado: 'completado', completado_at: new Date() }).eq('id', id)
+  async function completarOrden(id, planId, frecuenciaHoras) {
+    const hoy = new Date()
+    const proximaFecha = new Date(hoy)
+    proximaFecha.setDate(proximaFecha.getDate() + Math.round(frecuenciaHoras / 24))
+
+    await supabase.from('ordenes_trabajo').update({
+      estado: 'completado',
+      completado_at: hoy
+    }).eq('id', id)
+
+    // Actualizar el plan con la nueva fecha
+    if (planId) {
+      await supabase.from('planes_mantenimiento').update({
+        ultimo_mantenimiento: hoy.toISOString().split('T')[0],
+        proxima_fecha: proximaFecha.toISOString().split('T')[0]
+      }).eq('id', planId)
+    }
+
     cargarDatos()
   }
 
   async function eliminarOrden(id) {
     await supabase.from('ordenes_trabajo').delete().eq('id', id)
     cargarDatos()
+  }
+
+  function formatearFecha(fecha) {
+    if (!fecha) return '—'
+    return new Date(fecha).toLocaleDateString('es-AR')
   }
 
   return (
@@ -78,8 +99,9 @@ export default function Ordenes() {
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Estado</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Completado</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Notas</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -92,10 +114,11 @@ export default function Ordenes() {
                       {o.estado}
                     </span>
                   </td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{formatearFecha(o.completado_at)}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{o.notas}</td>
                   <td style={{ padding: '14px 16px', display: 'flex', gap: '8px' }}>
                     {o.estado === 'pendiente' && (
-                      <button onClick={() => completarOrden(o.id)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#065f46', border: '1px solid #065f46', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                      <button onClick={() => completarOrden(o.id, o.plan_id, o.planes_mantenimiento?.frecuencia_horas)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#065f46', border: '1px solid #065f46', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
                         Completar
                       </button>
                     )}
