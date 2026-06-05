@@ -35,51 +35,31 @@ export default function Login() {
   const inputStyle = {
     padding: '12px 16px',
     fontSize: '14px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
+    backgroundColor: '#e5e7eb',
+    border: '1px solid #9ca3af',
     borderRadius: '8px',
     color: '#111827',
     outline: 'none',
     width: '100%',
     boxSizing: 'border-box',
-    transition: 'border-color 0.2s',
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      backgroundColor: '#f9fafb',
-    }}>
+    <div style={{ minHeight: '100vh', display: 'flex', backgroundColor: '#e5e7eb' }}>
+
       {/* Panel izquierdo */}
       <div style={{
         flex: 1,
-        backgroundColor: '#111827',
+        backgroundColor: '#d1d5db',
+        borderRight: '1px solid #9ca3af',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         padding: '60px',
-        maxWidth: '480px',
+        maxWidth: '420px',
       }}>
-        <div style={{ marginBottom: '48px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#ffffff', margin: '0 0 8px', letterSpacing: '-1px' }}>Maintor</h1>
-          <p style={{ color: '#6b7280', fontSize: '15px', margin: 0 }}>Gestión de mantenimiento preventivo</p>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {[
-            { titulo: '📋 Planes de mantenimiento', desc: 'Programá tareas por activo y frecuencia' },
-            { titulo: '⚙️ Órdenes de trabajo', desc: 'Creá y completá órdenes en tiempo real' },
-            { titulo: '📅 Calendario preventivo', desc: 'Visualizá próximos mantenimientos' },
-          ].map((item) => (
-            <div key={item.titulo} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '600', color: '#f9fafb' }}>{item.titulo}</p>
-                <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#111827', margin: '0 0 8px', letterSpacing: '-1px' }}>Maintor</h1>
+        <p style={{ color: '#6b7280', fontSize: '15px', margin: 0 }}>Gestión de mantenimiento preventivo</p>
       </div>
 
       {/* Panel derecho */}
@@ -105,35 +85,18 @@ export default function Login() {
             {esRegistro && (
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Nombre de la empresa</label>
-                <input
-                  placeholder="Ej: Industrias Pérez S.A."
-                  value={empresa}
-                  onChange={e => setEmpresa(e.target.value)}
-                  style={inputStyle}
-                />
+                <input placeholder="Ej: Industrias Pérez S.A." value={empresa} onChange={e => setEmpresa(e.target.value)} style={inputStyle} />
               </div>
             )}
 
             <div>
               <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Email</label>
-              <input
-                placeholder="tu@email.com"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                style={inputStyle}
-              />
+              <input placeholder="tu@email.com" type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
             </div>
 
             <div>
               <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Contraseña</label>
-              <input
-                placeholder="••••••••"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                style={inputStyle}
-              />
+              <input placeholder="••••••••" type="password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} />
             </div>
 
             {error && (
@@ -142,27 +105,22 @@ export default function Login() {
               </div>
             )}
 
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              style={{
-                padding: '12px',
-                backgroundColor: loading ? '#6b7280' : '#111827',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                marginTop: '4px',
-                transition: 'background-color 0.2s',
-              }}>
+            <button onClick={handleSubmit} disabled={loading} style={{
+              padding: '12px',
+              backgroundColor: loading ? '#9ca3af' : '#111827',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              marginTop: '4px',
+            }}>
               {loading ? 'Cargando...' : esRegistro ? 'Crear cuenta' : 'Iniciar sesión'}
             </button>
 
             <div style={{ textAlign: 'center', paddingTop: '8px' }}>
-              <button
-                onClick={() => { setEsRegistro(!esRegistro); setError('') }}
+              <button onClick={() => { setEsRegistro(!esRegistro); setError('') }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#6b7280' }}>
                 {esRegistro ? '¿Ya tenés cuenta? ' : '¿No tenés cuenta? '}
                 <span style={{ color: '#111827', fontWeight: '600' }}>
