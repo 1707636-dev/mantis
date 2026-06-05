@@ -1,17 +1,20 @@
 'use client'
 import { supabase } from './supabase'
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function Sidebar() {
   const router = useRouter()
   const pathname = usePathname()
+  const [verificado, setVerificado] = useState(false)
 
   useEffect(() => {
     async function checkSession() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session && pathname !== '/login') {
         router.push('/login')
+      } else {
+        setVerificado(true)
       }
     }
     checkSession()
@@ -23,6 +26,7 @@ export default function Sidebar() {
   }
 
   if (pathname === '/login') return null
+  if (!verificado) return null
 
   return (
     <aside style={{ width: '240px', backgroundColor: '#d1d5db', padding: '24px 0', display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'fixed', top: 0, left: 0, borderRight: '1px solid #9ca3af', boxShadow: '2px 0 8px rgba(0,0,0,0.06)' }}>
