@@ -2,135 +2,245 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
+const SECTORES = ['Mantenimiento', 'Compras', 'Producción']
+const PERSONAS = ['David Bustos', 'José Ysach', 'Jesús Bottino', 'Maximiliano Scarafia']
+const ACTIVOS = ['Fripack', 'Dosificadora 1', 'Dosificadora 2', 'Dosificadora 3']
+const TAREAS = ['Preventiva', 'Correctiva', 'Otros']
+
+const colorSector = {
+  'Mantenimiento': { bg: '#dbeafe', color: '#1d4ed8' },
+  'Compras': { bg: '#fef3c7', color: '#92400e' },
+  'Producción': { bg: '#d1fae5', color: '#065f46' },
+}
+
 export default function Ordenes() {
   const [ordenes, setOrdenes] = useState([])
-  const [activos, setActivos] = useState([])
-  const [planes, setPlanes] = useState([])
-  const [activoId, setActivoId] = useState('')
-  const [planId, setPlanId] = useState('')
-  const [notas, setNotas] = useState('')
   const [loading, setLoading] = useState(true)
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [form, setForm] = useState({
+    sector: '',
+    persona: '',
+    activo: '',
+    tipo_tarea: '',
+    descripcion: '',
+    observaciones: '',
+    estado: 'pendiente',
+    fecha_estado: '',
+  })
+  const [otrosTarea, setOtrosTarea] = useState('')
 
-  useEffect(() => { cargarDatos() }, [])
+  useEffect(() => { cargarOrdenes() }, [])
 
-  async function cargarDatos() {
+  async function cargarOrdenes() {
     setLoading(true)
-    const { data: ordenesData } = await supabase.from('ordenes_trabajo').select('*, activos(nombre), planes_mantenimiento(tarea, frecuencia_horas)')
-    const { data: activosData } = await supabase.from('activos').select('*')
-    const { data: planesData } = await supabase.from('planes_mantenimiento').select('*')
-    setOrdenes(ordenesData || [])
-    setActivos(activosData || [])
-    setPlanes(planesData || [])
+    const { data } = await supabase.from('ordenes_trabajo').select('*').order('created_at', { ascending: false })
+    setOrdenes(data || [])
     setLoading(false)
   }
 
-  async function crearOrden() {
-    if (!activoId || !planId) return
-    await supabase.from('ordenes_trabajo').insert({ activo_id: activoId, plan_id: planId, notas, estado: 'pendiente' })
-    setActivoId('')
-    setPlanId('')
-    setNotas('')
-    cargarDatos()
+  function setField(key, value) {
+    setForm(f => ({ ...f, [key]: value }))
   }
 
-  async function completarOrden(id, planId, frecuenciaHoras) {
-    const hoy = new Date()
-    const proximaFecha = new Date(hoy)
-    proximaFecha.setDate(proximaFecha.getDate() + Math.round(frecuenciaHoras / 24))
+  async function guardarOrden() {
+    if (!form.sector || !form.persona || !form.activo || !form.tipo_tarea) return
+    const tarea = form.tipo_tarea === 'Otros' ? otrosTarea : form.tipo_tarea
+    await supabase.from('ordenes_trabajo').insert({
+      sector: form.sector,
+      persona: form.persona,
+      activo: form.activo,
+      tipo_tarea: tarea,
+      descripcion: form.descripcion,
+      observaciones: form.observaciones,
+      estado: 'pendiente',
+      fecha_estado: null,
+    })
+    resetForm()
+    cargarOrdenes()
+  }
 
+  async function marcarRealizado(id) {
     await supabase.from('ordenes_trabajo').update({
       estado: 'completado',
-      completado_at: hoy
+      fecha_estado: new Date().toISOString().split('T')[0],
+      completado_at: new Date()
     }).eq('id', id)
-
-    // Actualizar el plan con la nueva fecha
-    if (planId) {
-      await supabase.from('planes_mantenimiento').update({
-        ultimo_mantenimiento: hoy.toISOString().split('T')[0],
-        proxima_fecha: proximaFecha.toISOString().split('T')[0]
-      }).eq('id', planId)
-    }
-
-    cargarDatos()
+    cargarOrdenes()
   }
 
   async function eliminarOrden(id) {
     await supabase.from('ordenes_trabajo').delete().eq('id', id)
-    cargarDatos()
+    cargarOrdenes()
   }
 
-  function formatearFecha(fecha) {
-    if (!fecha) return '—'
-    return new Date(fecha).toLocaleDateString('es-AR')
+  function resetForm() {
+    setForm({ sector: '', persona: '', activo: '', tipo_tarea: '', descripcion: '', observaciones: '', estado: 'pendiente', fecha_estado: '' })
+    setOtrosTarea('')
+    setMostrarForm(false)
   }
+
+  function imprimirOrden(o) {
+    const ventana = window.open('', '_blank')
+    ventana.document.write(`
+      <html><head><title>Orden ${o.sector}</title>
+      <style>body{font-family:Arial;padding:32px;color:#111} h1{font-size:20px} table{width:100%;border-collapse:collapse;margin-top:16px} td,th{border:1px solid #ccc;padding:8px;font-size:13px} th{background:#f3f4f6}</style>
+      </head><body>
+      <h1>Orden de ${o.sector}</h1>
+      <table>
+        <tr><th>Sector</th><td>${o.sector}</td><th>Activo</th><td>${o.activo}</td></tr>
+        <tr><th>Persona</th><td>${o.persona}</td><th>Tarea</th><td>${o.tipo_tarea}</td></tr>
+        <tr><th>Descripción</th><td colspan="3">${o.descripcion || '—'}</td></tr>
+        <tr><th>Estado</th><td>${o.estado}</td><th>Fecha</th><td>${o.fecha_estado || '—'}</td></tr>
+        <tr><th>Observaciones</th><td colspan="3">${o.observaciones || '—'}</td></tr>
+      </table>
+      </body></html>
+    `)
+    ventana.document.close()
+    ventana.print()
+  }
+
+  function exportarExcel(o) {
+    const csv = `Sector,Activo,Persona,Tarea,Descripción,Estado,Fecha,Observaciones\n${o.sector},${o.activo},${o.persona},${o.tipo_tarea},"${o.descripcion || ''}",${o.estado},${o.fecha_estado || ''},"${o.observaciones || ''}"`
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `orden_${o.sector}_${o.id}.csv`
+    a.click()
+  }
+
+  const selectStyle = { padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none', width: '100%' }
+  const inputStyle = { ...selectStyle }
 
   return (
     <div>
-      <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: '0 0 4px' }}>Órdenes de trabajo</h1>
-      <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 32px' }}>Tareas de mantenimiento activas</p>
-
-      <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', padding: '24px', border: '1px solid #9ca3af', marginBottom: '24px', maxWidth: '480px' }}>
-        <h2 style={{ margin: '0 0 16px', fontSize: '15px', color: '#374151', fontWeight: '600' }}>Nueva orden</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <select value={activoId} onChange={e => setActivoId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none' }}>
-            <option value=''>Seleccioná un activo</option>
-            {activos.map(a => (<option key={a.id} value={a.id}>{a.nombre}</option>))}
-          </select>
-          <select value={planId} onChange={e => setPlanId(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none' }}>
-            <option value=''>Seleccioná una tarea</option>
-            {planes.map(p => (<option key={p.id} value={p.id}>{p.tarea}</option>))}
-          </select>
-          <textarea placeholder='Notas (opcional)' value={notas} onChange={e => setNotas(e.target.value)} style={{ padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none', height: '80px', resize: 'none' }} />
-          <button onClick={crearOrden} style={{ padding: '10px', backgroundColor: '#111827', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
-            Crear orden
-          </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: '0 0 4px' }}>Órdenes de trabajo</h1>
+          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Gestión de tareas por sector</p>
         </div>
+        <button onClick={() => setMostrarForm(!mostrarForm)} style={{ padding: '10px 20px', backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+          + Nueva orden
+        </button>
       </div>
 
-      <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', border: '1px solid #9ca3af', overflow: 'hidden' }}>
+      {/* Formulario */}
+      {mostrarForm && (
+        <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', padding: '24px', border: '1px solid #9ca3af', marginBottom: '24px' }}>
+          <h2 style={{ margin: '0 0 20px', fontSize: '15px', color: '#374151', fontWeight: '600' }}>
+            {form.sector ? `Orden de ${form.sector}` : 'Nueva orden'}
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Sector</label>
+              <select value={form.sector} onChange={e => setField('sector', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná un sector</option>
+                {SECTORES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Persona a ejecutar</label>
+              <select value={form.persona} onChange={e => setField('persona', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná una persona</option>
+                {PERSONAS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Activo</label>
+              <select value={form.activo} onChange={e => setField('activo', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná un activo</option>
+                {ACTIVOS.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Tarea</label>
+              <select value={form.tipo_tarea} onChange={e => setField('tipo_tarea', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná una tarea</option>
+                {TAREAS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            {form.tipo_tarea === 'Otros' && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>¿Cuál es la tarea?</label>
+                <input placeholder="Describí la tarea" value={otrosTarea} onChange={e => setOtrosTarea(e.target.value)} style={inputStyle} />
+              </div>
+            )}
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Descripción de la tarea</label>
+              <textarea placeholder="Detallá qué hay que hacer..." value={form.descripcion} onChange={e => setField('descripcion', e.target.value)}
+                style={{ ...inputStyle, height: '80px', resize: 'none' }} />
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Observaciones</label>
+              <textarea placeholder="Observaciones adicionales..." value={form.observaciones} onChange={e => setField('observaciones', e.target.value)}
+                style={{ ...inputStyle, height: '60px', resize: 'none' }} />
+            </div>
+
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button onClick={guardarOrden} style={{ padding: '10px 20px', backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+              Guardar
+            </button>
+            <button onClick={resetForm} style={{ padding: '10px 20px', backgroundColor: 'transparent', color: '#374151', border: '1px solid #9ca3af', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista de órdenes */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {loading ? (
-          <p style={{ padding: '24px', color: '#6b7280', margin: 0 }}>Cargando...</p>
+          <p style={{ color: '#6b7280' }}>Cargando...</p>
         ) : ordenes.length === 0 ? (
-          <p style={{ padding: '24px', color: '#6b7280', margin: 0 }}>No hay órdenes registradas.</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#9ca3af' }}>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Estado</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Completado</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '12px', color: '#374151', textTransform: 'uppercase', letterSpacing: '1px' }}>Notas</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordenes.map((o, i) => (
-                <tr key={o.id} style={{ borderTop: '1px solid #9ca3af', backgroundColor: i % 2 === 0 ? '#d1d5db' : '#c4c9d0' }}>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#111827' }}>{o.activos?.nombre}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{o.planes_mantenimiento?.tarea}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: o.estado === 'completado' ? '#d1fae5' : '#fef3c7', color: o.estado === 'completado' ? '#065f46' : '#92400e' }}>
-                      {o.estado}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#374151' }}>{formatearFecha(o.completado_at)}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{o.notas}</td>
-                  <td style={{ padding: '14px 16px', display: 'flex', gap: '8px' }}>
-                    {o.estado === 'pendiente' && (
-                      <button onClick={() => completarOrden(o.id, o.plan_id, o.planes_mantenimiento?.frecuencia_horas)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#065f46', border: '1px solid #065f46', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                        Completar
-                      </button>
-                    )}
-                    <button onClick={() => eliminarOrden(o.id)} style={{ padding: '6px 12px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+          <p style={{ color: '#6b7280' }}>No hay órdenes registradas.</p>
+        ) : ordenes.map(o => (
+          <div key={o.id} style={{ backgroundColor: '#d1d5db', borderRadius: '12px', border: '1px solid #9ca3af', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', backgroundColor: colorSector[o.sector]?.bg || '#e5e7eb', color: colorSector[o.sector]?.color || '#374151' }}>
+                  {o.sector}
+                </span>
+                <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: o.estado === 'completado' ? '#d1fae5' : '#fef3c7', color: o.estado === 'completado' ? '#065f46' : '#92400e' }}>
+                  {o.estado}
+                </span>
+                {o.fecha_estado && <span style={{ fontSize: '12px', color: '#6b7280' }}>{o.fecha_estado}</span>}
+              </div>
+              <button onClick={() => eliminarOrden(o.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '13px' }}>Eliminar</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div><p style={{ margin: '0 0 2px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</p><p style={{ margin: 0, fontSize: '14px', color: '#111827', fontWeight: '500' }}>{o.activo}</p></div>
+              <div><p style={{ margin: '0 0 2px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</p><p style={{ margin: 0, fontSize: '14px', color: '#111827', fontWeight: '500' }}>{o.tipo_tarea}</p></div>
+              <div><p style={{ margin: '0 0 2px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>Persona</p><p style={{ margin: 0, fontSize: '14px', color: '#111827', fontWeight: '500' }}>{o.persona}</p></div>
+            </div>
+
+            {o.descripcion && <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#374151', backgroundColor: '#e5e7eb', padding: '10px', borderRadius: '8px' }}>{o.descripcion}</p>}
+            {o.observaciones && <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>Obs: {o.observaciones}</p>}
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              {o.estado === 'pendiente' && (
+                <button onClick={() => marcarRealizado(o.id)} style={{ padding: '8px 16px', backgroundColor: '#065f46', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                  ✓ Realizado
+                </button>
+              )}
+              <button onClick={() => imprimirOrden(o)} style={{ padding: '8px 16px', backgroundColor: 'transparent', color: '#374151', border: '1px solid #9ca3af', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                🖨 Imprimir
+              </button>
+              <button onClick={() => exportarExcel(o)} style={{ padding: '8px 16px', backgroundColor: 'transparent', color: '#374151', border: '1px solid #9ca3af', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                📊 Exportar
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
