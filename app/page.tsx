@@ -2,152 +2,247 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-export default function Home() {
-  const [activos, setActivos] = useState(0)
-  const [planes, setPlanes] = useState(0)
-  const [pendientes, setPendientes] = useState(0)
-  const [completadas, setCompletadas] = useState(0)
-  const [proximosMant, setProximosMant] = useState<any[]>([])
-  const [mesActual, setMesActual] = useState(new Date())
+const SECTORES = ['Mantenimiento', 'Compras', 'Producción']
+const PERSONAS = ['David Bustos', 'José Ysach', 'Jesús Bottino', 'Maximiliano Scarafia']
+const ACTIVOS = ['Fripack', 'Dosificadora 1', 'Dosificadora 2', 'Dosificadora 3']
+const TAREAS = ['Preventiva', 'Correctiva', 'Otros']
 
-  useEffect(() => {
-    async function cargarDatos() {
-      const { count: countActivos } = await supabase.from('activos').select('*', { count: 'exact', head: true })
-      const { count: countPlanes } = await supabase.from('planes_mantenimiento').select('*', { count: 'exact', head: true })
-      const { count: countPendientes } = await supabase.from('ordenes_trabajo').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente')
-      const { count: countCompletadas } = await supabase.from('ordenes_trabajo').select('*', { count: 'exact', head: true }).eq('estado', 'completado')
-      const { data: planesData } = await supabase.from('planes_mantenimiento').select('*, activos(nombre)').not('proxima_fecha', 'is', null)
+const colorSector: Record<string, { bg: string; color: string }> = {
+  'Mantenimiento': { bg: '#dbeafe', color: '#1d4ed8' },
+  'Compras': { bg: '#fef3c7', color: '#92400e' },
+  'Producción': { bg: '#d1fae5', color: '#065f46' },
+}
 
-      setActivos(countActivos || 0)
-      setPlanes(countPlanes || 0)
-      setPendientes(countPendientes || 0)
-      setCompletadas(countCompletadas || 0)
-      setProximosMant(planesData || [])
-    }
-    cargarDatos()
-  }, [])
-
-  const tarjetas = [
-    { label: 'Activos', valor: activos, descripcion: 'Máquinas y equipos', href: '/activos', color: '#3b82f6' },
-    { label: 'Planes', valor: planes, descripcion: 'Tareas programadas', href: '/planes', color: '#8b5cf6' },
-    { label: 'Órdenes pendientes', valor: pendientes, descripcion: 'Por completar', href: '/ordenes', color: '#f59e0b' },
-    { label: 'Órdenes completadas', valor: completadas, descripcion: 'Finalizadas', href: '/ordenes', color: '#10b981' },
-  ]
-
-  // Calendario
-  const year = mesActual.getFullYear()
-  const month = mesActual.getMonth()
-  const primerDia = new Date(year, month, 1).getDay()
-  const diasEnMes = new Date(year, month + 1, 0).getDate()
-  const nombreMes = mesActual.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
-
-  const eventosDelMes = proximosMant.filter((p: any) => {
-    const fecha = new Date(p.proxima_fecha)
-    return fecha.getMonth() === month && fecha.getFullYear() === year
+export default function Ordenes() {
+  const [ordenes, setOrdenes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [form, setForm] = useState<any>({
+    sector: '', persona: '', activo: '', tipo_tarea: '',
+    descripcion: '', observaciones: '', costo: '',
   })
+  const [otrosTarea, setOtrosTarea] = useState('')
 
-  function tieneEvento(dia: number) {
-    return eventosDelMes.filter((p: any) => new Date(p.proxima_fecha).getDate() === dia)
+  useEffect(() => { cargarOrdenes() }, [])
+
+  async function cargarOrdenes() {
+    setLoading(true)
+    const { data } = await supabase.from('ordenes_trabajo').select('*').order('created_at', { ascending: false })
+    setOrdenes(data || [])
+    setLoading(false)
   }
 
-  function colorEvento(fecha: string) {
-    const hoy = new Date()
-    const f = new Date(fecha)
-    const diff = (f.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)
-    if (diff < 0) return '#ef4444'
-    if (diff <= 7) return '#f59e0b'
-    return '#10b981'
+  function setField(key: string, value: string) {
+    setForm((f: any) => ({ ...f, [key]: value }))
   }
 
-  const celdas = []
-  for (let i = 0; i < (primerDia === 0 ? 6 : primerDia - 1); i++) celdas.push(null)
-  for (let i = 1; i <= diasEnMes; i++) celdas.push(i)
+  async function guardarOrden() {
+    if (!form.sector || !form.persona || !form.activo || !form.tipo_tarea) return
+    const tarea = form.tipo_tarea === 'Otros' ? otrosTarea : form.tipo_tarea
+    await supabase.from('ordenes_trabajo').insert({
+      sector: form.sector, persona: form.persona, activo: form.activo,
+      tipo_tarea: tarea, descripcion: form.descripcion,
+      observaciones: form.observaciones, estado: 'pendiente',
+      costo: parseFloat(form.costo) || 0, aprobado: null,
+    })
+    resetForm()
+    cargarOrdenes()
+  }
 
-  const hoy = new Date()
+  async function marcarRealizado(id: string) {
+    await supabase.from('ordenes_trabajo').update({
+      estado: 'completado',
+      fecha_estado: new Date().toISOString().split('T')[0],
+      completado_at: new Date()
+    }).eq('id', id)
+    cargarOrdenes()
+  }
+
+  async function aprobarOrden(id: string, valor: boolean) {
+    await supabase.from('ordenes_trabajo').update({ aprobado: valor }).eq('id', id)
+    cargarOrdenes()
+  }
+
+  async function eliminarOrden(id: string) {
+    await supabase.from('ordenes_trabajo').delete().eq('id', id)
+    cargarOrdenes()
+  }
+
+  function resetForm() {
+    setForm({ sector: '', persona: '', activo: '', tipo_tarea: '', descripcion: '', observaciones: '', costo: '' })
+    setOtrosTarea('')
+    setMostrarForm(false)
+  }
+
+  function imprimirOrden(o: any) {
+    const ventana = window.open('', '_blank')
+    if (!ventana) return
+    ventana.document.write(`
+      <html><head><title>Orden ${o.sector}</title>
+      <style>body{font-family:Arial;padding:32px;color:#111} h1{font-size:20px} table{width:100%;border-collapse:collapse;margin-top:16px} td,th{border:1px solid #ccc;padding:8px;font-size:13px} th{background:#f3f4f6}</style>
+      </head><body>
+      <h1>Orden de ${o.sector}</h1>
+      <table>
+        <tr><th>Sector</th><td>${o.sector}</td><th>Activo</th><td>${o.activo}</td></tr>
+        <tr><th>Persona</th><td>${o.persona}</td><th>Tarea</th><td>${o.tipo_tarea}</td></tr>
+        <tr><th>Descripción</th><td colspan="3">${o.descripcion || '—'}</td></tr>
+        <tr><th>Estado</th><td>${o.estado}</td><th>Fecha</th><td>${o.fecha_estado || '—'}</td></tr>
+        <tr><th>Observaciones</th><td colspan="3">${o.observaciones || '—'}</td></tr>
+        <tr><th>Costo</th><td colspan="3">$${o.costo || 0}</td></tr>
+      </table>
+      </body></html>
+    `)
+    ventana.document.close()
+    ventana.print()
+  }
+
+  function exportarExcel(o: any) {
+    const csv = `Sector,Activo,Persona,Tarea,Descripción,Estado,Fecha,Observaciones,Costo\n${o.sector},${o.activo},${o.persona},${o.tipo_tarea},"${o.descripcion || ''}",${o.estado},${o.fecha_estado || ''},"${o.observaciones || ''}",${o.costo || 0}`
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `orden_${o.sector}_${o.id}.csv`
+    a.click()
+  }
+
+  const selectStyle = { padding: '10px 14px', fontSize: '14px', backgroundColor: '#e5e7eb', border: '1px solid #9ca3af', borderRadius: '8px', color: '#111827', outline: 'none', width: '100%' }
 
   return (
     <div>
-      <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#111827', margin: '0 0 8px' }}>Bienvenido a Maintor</h1>
-      <p style={{ color: '#6b7280', fontSize: '15px', margin: '0 0 40px' }}>Resumen de tu operación</p>
-
-      <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-
-        {/* Tarjetas */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', minWidth: '320px' }}>
-          {tarjetas.map((t) => (
-            <a key={t.label} href={t.href} style={{ backgroundColor: '#d1d5db', borderRadius: '12px', padding: '24px', textDecoration: 'none', border: '1px solid #9ca3af', display: 'block' }}>
-              <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>{t.label}</p>
-              <p style={{ margin: '0 0 4px', fontSize: '36px', fontWeight: '800', color: t.color }}>{t.valor}</p>
-              <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>{t.descripcion}</p>
-            </a>
-          ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: '0 0 4px' }}>Órdenes de trabajo</h1>
+          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Gestión de tareas por sector</p>
         </div>
+        <button onClick={() => setMostrarForm(!mostrarForm)} style={{ padding: '10px 20px', backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+          + Nueva orden
+        </button>
+      </div>
 
-        {/* Calendario */}
-        <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', border: '1px solid #9ca3af', padding: '24px', minWidth: '320px', flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <button onClick={() => setMesActual(new Date(year, month - 1))} style={{ background: 'none', border: '1px solid #9ca3af', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: '#374151' }}>←</button>
-            <p style={{ margin: 0, fontWeight: '700', color: '#111827', fontSize: '15px', textTransform: 'capitalize' }}>{nombreMes}</p>
-            <button onClick={() => setMesActual(new Date(year, month + 1))} style={{ background: 'none', border: '1px solid #9ca3af', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: '#374151' }}>→</button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '8px' }}>
-            {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'].map(d => (
-              <div key={d} style={{ textAlign: 'center', fontSize: '12px', color: '#6b7280', fontWeight: '600', padding: '4px 0' }}>{d}</div>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-            {celdas.map((dia, i) => {
-              const eventos = dia ? tieneEvento(dia) : []
-              const esHoy = dia && hoy.getDate() === dia && hoy.getMonth() === month && hoy.getFullYear() === year
-              return (
-                <div key={i} title={eventos.map(e => `${e.activos?.nombre}: ${e.tarea}`).join('\n')}
-                  style={{
-                    height: '36px', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: esHoy ? '#111827' : eventos.length > 0 ? '#e5e7eb' : 'transparent',
-                    border: eventos.length > 0 && !esHoy ? '1px solid #9ca3af' : 'none',
-                    cursor: eventos.length > 0 ? 'pointer' : 'default',
-                    position: 'relative'
-                  }}>
-                  {dia && <span style={{ fontSize: '13px', color: esHoy ? '#fff' : '#374151', fontWeight: esHoy ? '700' : '400' }}>{dia}</span>}
-                  {eventos.length > 0 && (
-                    <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
-                      {eventos.slice(0, 3).map((e, j) => (
-                        <div key={j} style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: colorEvento(e.proxima_fecha) }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Leyenda */}
-          <div style={{ marginTop: '16px', borderTop: '1px solid #9ca3af', paddingTop: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} /><span style={{ fontSize: '12px', color: '#6b7280' }}>Al día</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} /><span style={{ fontSize: '12px', color: '#6b7280' }}>Próximo (7 días)</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} /><span style={{ fontSize: '12px', color: '#6b7280' }}>Vencido</span></div>
-          </div>
-
-          {/* Lista de eventos del mes */}
-          {eventosDelMes.length > 0 && (
-            <div style={{ marginTop: '16px', borderTop: '1px solid #9ca3af', paddingTop: '12px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Este mes</p>
-              {eventosDelMes.sort((a: any, b: any) => new Date(a.proxima_fecha).getTime() - new Date(b.proxima_fecha).getTime()).map((e: any) => (
-                <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #e5e7eb' }}>
-                  <div>
-                    <span style={{ fontSize: '13px', color: '#111827', fontWeight: '500' }}>{e.activos?.nombre}</span>
-                    <span style={{ fontSize: '13px', color: '#6b7280' }}> — {e.tarea}</span>
-                  </div>
-                  <span style={{ fontSize: '12px', color: colorEvento(e.proxima_fecha), fontWeight: '600' }}>
-                    {new Date(e.proxima_fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                  </span>
-                </div>
-              ))}
+      {mostrarForm && (
+        <div style={{ backgroundColor: '#d1d5db', borderRadius: '12px', padding: '24px', border: '1px solid #9ca3af', marginBottom: '24px' }}>
+          <h2 style={{ margin: '0 0 20px', fontSize: '15px', color: '#374151', fontWeight: '600' }}>
+            {form.sector ? `Orden de ${form.sector}` : 'Nueva orden'}
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Sector</label>
+              <select value={form.sector} onChange={e => setField('sector', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná un sector</option>
+                {SECTORES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
-          )}
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Persona a ejecutar</label>
+              <select value={form.persona} onChange={e => setField('persona', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná una persona</option>
+                {PERSONAS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Activo</label>
+              <select value={form.activo} onChange={e => setField('activo', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná un activo</option>
+                {ACTIVOS.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Tarea</label>
+              <select value={form.tipo_tarea} onChange={e => setField('tipo_tarea', e.target.value)} style={selectStyle}>
+                <option value=''>Seleccioná una tarea</option>
+                {TAREAS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            {form.tipo_tarea === 'Otros' && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>¿Cuál es la tarea?</label>
+                <input placeholder="Describí la tarea" value={otrosTarea} onChange={e => setOtrosTarea(e.target.value)} style={selectStyle} />
+              </div>
+            )}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Descripción de la tarea</label>
+              <textarea placeholder="Detallá qué hay que hacer..." value={form.descripcion} onChange={e => setField('descripcion', e.target.value)}
+                style={{ ...selectStyle, height: '80px', resize: 'none' }} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Observaciones</label>
+              <textarea placeholder="Observaciones adicionales..." value={form.observaciones} onChange={e => setField('observaciones', e.target.value)}
+                style={{ ...selectStyle, height: '60px', resize: 'none' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Costo estimado ($)</label>
+              <input type="number" placeholder="0" value={form.costo} onChange={e => setField('costo', e.target.value)} style={selectStyle} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button onClick={guardarOrden} style={{ padding: '10px 20px', backgroundColor: '#111827', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+              Guardar
+            </button>
+            <button onClick={resetForm} style={{ padding: '10px 20px', backgroundColor: 'transparent', color: '#374151', border: '1px solid #9ca3af', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>
+              Cancelar
+            </button>
+          </div>
         </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {loading ? (
+          <p style={{ color: '#6b7280' }}>Cargando...</p>
+        ) : ordenes.length === 0 ? (
+          <p style={{ color: '#6b7280' }}>No hay órdenes registradas.</p>
+        ) : ordenes.map((o: any) => (
+          <div key={o.id} style={{ backgroundColor: '#d1d5db', borderRadius: '12px', border: '1px solid #9ca3af', padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', backgroundColor: colorSector[o.sector]?.bg || '#e5e7eb', color: colorSector[o.sector]?.color || '#374151' }}>
+                  {o.sector}
+                </span>
+                <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: o.estado === 'completado' ? '#d1fae5' : '#fef3c7', color: o.estado === 'completado' ? '#065f46' : '#92400e' }}>
+                  {o.estado}
+                </span>
+                {o.aprobado === true && <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: '#d1fae5', color: '#065f46' }}>✓ Aprobado</span>}
+                {o.aprobado === false && <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: '#fee2e2', color: '#dc2626' }}>✗ Rechazado</span>}
+                {o.fecha_estado && <span style={{ fontSize: '12px', color: '#6b7280' }}>{o.fecha_estado}</span>}
+                {o.costo > 0 && <span style={{ fontSize: '12px', color: '#374151', fontWeight: '600' }}>${o.costo}</span>}
+              </div>
+              <button onClick={() => eliminarOrden(o.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '13px' }}>Eliminar</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div><p style={{ margin: '0 0 2px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>Activo</p><p style={{ margin: 0, fontSize: '14px', color: '#111827', fontWeight: '500' }}>{o.activo}</p></div>
+              <div><p style={{ margin: '0 0 2px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>Tarea</p><p style={{ margin: 0, fontSize: '14px', color: '#111827', fontWeight: '500' }}>{o.tipo_tarea}</p></div>
+              <div><p style={{ margin: '0 0 2px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px' }}>Persona</p><p style={{ margin: 0, fontSize: '14px', color: '#111827', fontWeight: '500' }}>{o.persona}</p></div>
+            </div>
+
+            {o.descripcion && <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#374151', backgroundColor: '#e5e7eb', padding: '10px', borderRadius: '8px' }}>{o.descripcion}</p>}
+            {o.observaciones && <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>Obs: {o.observaciones}</p>}
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+              {o.estado === 'pendiente' && (
+                <button onClick={() => marcarRealizado(o.id)} style={{ padding: '8px 16px', backgroundColor: '#065f46', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                  ✓ Realizado
+                </button>
+              )}
+              {o.aprobado === null && (
+                <>
+                  <button onClick={() => aprobarOrden(o.id, true)} style={{ padding: '8px 16px', backgroundColor: '#1d4ed8', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                    ✓ Aprobar
+                  </button>
+                  <button onClick={() => aprobarOrden(o.id, false)} style={{ padding: '8px 16px', backgroundColor: 'transparent', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                    ✗ Rechazar
+                  </button>
+                </>
+              )}
+              <button onClick={() => imprimirOrden(o)} style={{ padding: '8px 16px', backgroundColor: 'transparent', color: '#374151', border: '1px solid #9ca3af', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                🖨 Imprimir
+              </button>
+              <button onClick={() => exportarExcel(o)} style={{ padding: '8px 16px', backgroundColor: 'transparent', color: '#374151', border: '1px solid #9ca3af', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                📊 Exportar
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
